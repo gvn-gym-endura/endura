@@ -871,34 +871,40 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createWorkoutProgram(program: InsertWorkoutProgram & { collectionIds?: string[] }): Promise<WorkoutProgram> {
+    // Destructure to separate collectionIds (not a DB column) from actual DB fields
+    const { collectionIds, ...dbProgram } = program;
+    
     const [created] = await drizzleDb.insert(schema.workoutPrograms).values({
-      ...program,
-      memberId: program.memberId || null,
-      customWorkoutPlan: (program as any).customWorkoutPlan || false,
-      exercises: (program.exercises as any) || [],
-      equipment: (program.equipment as any) || [],
+      ...dbProgram,
+      memberId: dbProgram.memberId || null,
+      customWorkoutPlan: (dbProgram as any).customWorkoutPlan || false,
+      exercises: (dbProgram.exercises as any) || [],
+      equipment: (dbProgram.equipment as any) || [],
     }).returning();
     
     // Handle collection assignments
-    if ((program as any).collectionIds && (program as any).collectionIds.length > 0) {
-      await this.addWorkoutToCollections(created.id, (program as any).collectionIds);
+    if (collectionIds && collectionIds.length > 0) {
+      await this.addWorkoutToCollections(created.id, collectionIds);
     }
     
     return created;
   }
 
   async updateWorkoutProgram(id: string, program: UpdateWorkoutProgram & { collectionIds?: string[] }): Promise<WorkoutProgram | undefined> {
+    // Destructure to separate collectionIds (not a DB column) from actual DB fields
+    const { collectionIds, ...dbProgram } = program;
+    
     const [updated] = await drizzleDb.update(schema.workoutPrograms).set({
-      ...program,
-      memberId: program.memberId !== undefined ? program.memberId : undefined,
-      customWorkoutPlan: (program as any).customWorkoutPlan !== undefined ? (program as any).customWorkoutPlan : undefined,
-      exercises: program.exercises ? (program.exercises as any) : undefined,
-      equipment: program.equipment ? (program.equipment as any) : undefined,
+      ...dbProgram,
+      memberId: dbProgram.memberId !== undefined ? dbProgram.memberId : undefined,
+      customWorkoutPlan: (dbProgram as any).customWorkoutPlan !== undefined ? (dbProgram as any).customWorkoutPlan : undefined,
+      exercises: dbProgram.exercises ? (dbProgram.exercises as any) : undefined,
+      equipment: dbProgram.equipment ? (dbProgram.equipment as any) : undefined,
     }).where(eq(schema.workoutPrograms.id, id)).returning();
     
     // Handle collection assignments
-    if ((program as any).collectionIds !== undefined) {
-      await this.updateWorkoutCollections(id, (program as any).collectionIds);
+    if (collectionIds !== undefined) {
+      await this.updateWorkoutCollections(id, collectionIds);
     }
     
     return updated || undefined;
