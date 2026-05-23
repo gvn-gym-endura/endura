@@ -882,9 +882,14 @@ export class DatabaseStorage implements IStorage {
       equipment: (dbProgram.equipment as any) || [],
     }).returning();
     
-    // Handle collection assignments
+    // Handle collection assignments (soft-fail to avoid breaking workout creation)
     if (collectionIds && collectionIds.length > 0) {
-      await this.addWorkoutToCollections(created.id, collectionIds);
+      try {
+        await this.addWorkoutToCollections(created.id, collectionIds);
+      } catch (e) {
+        console.error("[createWorkoutProgram] Failed to add workout to collections (workout saved):", e);
+        console.error("[createWorkoutProgram] collectionIds received:", JSON.stringify(collectionIds));
+      }
     }
     
     return created;
@@ -902,9 +907,14 @@ export class DatabaseStorage implements IStorage {
       equipment: dbProgram.equipment ? (dbProgram.equipment as any) : undefined,
     }).where(eq(schema.workoutPrograms.id, id)).returning();
     
-    // Handle collection assignments
+    // Handle collection assignments (soft-fail to avoid breaking workout update)
     if (collectionIds !== undefined) {
-      await this.updateWorkoutCollections(id, collectionIds);
+      try {
+        await this.updateWorkoutCollections(id, collectionIds);
+      } catch (e) {
+        console.error("[updateWorkoutProgram] Failed to update workout collections (workout saved):", e);
+        console.error("[updateWorkoutProgram] collectionIds received:", JSON.stringify(collectionIds));
+      }
     }
     
     return updated || undefined;
