@@ -15,6 +15,8 @@ import {
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
+  QrCode,
+  X,
 } from "lucide-react";
 import { useState, useCallback, useMemo } from "react";
 import {
@@ -43,6 +45,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Lead, MembershipPlan, Branch, User } from "@shared/schema";
+import { QRCodeSVG } from "qrcode.react";
 
 
 const sourceOptions = ["Walk-in", "Instagram", "Facebook", "Referral", "Website", "Other"];
@@ -56,6 +59,7 @@ export default function Leads() {
   const [convertingLead, setConvertingLead] = useState<Lead | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "follow_up" | "converted" | "rejected">("all");
+  const [showQR, setShowQR] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -719,14 +723,44 @@ export default function Leads() {
             </p>
           </div>
 
-          <Button
-            className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20"
-            onClick={handleOpenAdd}
-            data-testid="button-add-lead"
-          >
-            <Plus className="h-4 w-4" /> Add Lead
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              className="gap-2 border-border"
+              onClick={() => setShowQR(!showQR)}
+            >
+              {showQR ? <X className="h-4 w-4" /> : <QrCode className="h-4 w-4" />}
+              {showQR ? "Close QR" : "QR Code"}
+            </Button>
+            <Button
+              className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20"
+              onClick={handleOpenAdd}
+              data-testid="button-add-lead"
+            >
+              <Plus className="h-4 w-4" /> Add Lead
+            </Button>
+          </div>
         </div>
+
+        {/* QR Code Panel */}
+        {showQR && (
+          <div className="flex items-center justify-center bg-card p-6 rounded-lg border border-border shadow-sm">
+            <div className="text-center">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
+                Scan to Enquire
+              </p>
+              <QRCodeSVG
+                value={`${window.location.origin}/self-enquiry`}
+                size={180}
+                level="M"
+                className="mx-auto rounded-lg border border-border/50"
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                Open on your phone to fill the enquiry form
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center gap-4 bg-card p-4 rounded-lg border border-border shadow-sm">
           <div className="relative flex-1">
