@@ -48,9 +48,7 @@ export default function SelfEnquiry() {
         const [companyRes, branchesRes, moduleRes] = await Promise.all([
           fetch("/api/company-settings"),
           fetch("/api/branches"),
-          fetch("/api/module-control/enabled").catch(() => null),
-          fetch("/api/company-settings"),
-          fetch("/api/branches"),
+          fetch("/api/module-control").catch(() => null),
         ]);
         if (companyRes.ok) {
           const data = await companyRes.json();
@@ -69,9 +67,15 @@ export default function SelfEnquiry() {
             }
           }
         }
+        // Check if self-enquiry is explicitly disabled
+        // Default to enabled if module isn't in the DB yet
         if (moduleRes?.ok) {
           const data = await moduleRes.json();
-          if (data.enabledModules && !data.enabledModules.includes("self-enquiry")) {
+          const modules = data.modules || [];
+          const selfEnquiryModule = modules.find(
+            (m: any) => m.moduleName === "self-enquiry"
+          );
+          if (selfEnquiryModule && !selfEnquiryModule.enabled) {
             setModuleEnabled(false);
           }
         }
