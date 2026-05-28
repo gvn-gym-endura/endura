@@ -1583,6 +1583,8 @@ export class DatabaseStorage implements IStorage {
       { moduleName: 'admin-ai-usage', moduleLabel: 'AI Usage', description: 'AI usage tracking' },
       { moduleName: 'admin-account', moduleLabel: 'Account Settings', description: 'Account settings' },
       { moduleName: 'admin-uploads', moduleLabel: 'Uploads', description: 'Manage uploads' },
+      // Public modules
+      { moduleName: 'self-enquiry', moduleLabel: 'Self Enquiry', description: 'Public self-enquiry / QR code registration' },
     ];
 
     for (const mod of defaultModules) {

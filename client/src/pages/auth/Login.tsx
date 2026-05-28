@@ -12,17 +12,19 @@ import {
 } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Dumbbell } from "lucide-react";
+import { Dumbbell, QrCode, X } from "lucide-react";
 import bgmain from "../../assets/bg-main.jpg";
 import { useAuth } from "@/lib/auth";
 import { apiRequest } from "@/lib/queryClient";
 import type { SafeUser } from "@shared/schema";
+import { QRCodeSVG } from "qrcode.react";
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [selectedRole, setSelectedRole] = useState("admin");
   const [isLoading, setIsLoading] = useState(false);
+  const [showQR, setShowQR] = useState(false);
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { login } = useAuth();
@@ -147,6 +149,33 @@ export default function Login() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Floating QR Code Button */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+        {showQR && (
+          <div className="bg-card/95 backdrop-blur border border-border rounded-xl p-4 shadow-2xl text-center animate-in fade-in slide-in-from-bottom-5 duration-200">
+            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
+              Scan to Enquire
+            </p>
+            <QRCodeSVG
+              value={`${window.location.origin}/self-enquiry`}
+              size={160}
+              level="M"
+              className="mx-auto rounded-lg border border-border/50"
+            />
+            <p className="text-[10px] text-muted-foreground mt-2 leading-tight">
+              Open this page on your phone<br />to fill the enquiry form
+            </p>
+          </div>
+        )}
+        <button
+          onClick={() => setShowQR(!showQR)}
+          className="h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all flex items-center justify-center"
+          aria-label={showQR ? "Close QR code" : "Show QR code for self enquiry"}
+        >
+          {showQR ? <X className="h-5 w-5" /> : <QrCode className="h-5 w-5" />}
+        </button>
+      </div>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { NotificationInitializer } from "@/components/NotificationInitializer";
 import { NotificationPermissionPrompt } from "@/components/NotificationPermissionPrompt";
 import { useSuperadminTerminal } from "@/hooks/useSuperadminTerminal";
 import { ModuleControlTerminal } from "@/components/admin/ModuleControlTerminal";
+import SelfEnquiry from "@/pages/SelfEnquiry";
 import NotFound from "@/pages/not-found";
 
  // Admin Pages
@@ -93,6 +94,9 @@ function Router() {
       <Route path="/member/trainers" component={MemberTrainers} />
       <Route path="/member/notifications" component={MemberNotifications} />
       <Route path="/member/notification-settings" component={NotificationSettings} />
+
+      {/* Public Routes */}
+      <Route path="/self-enquiry/:branchSlug?" component={SelfEnquiry} />
 
       <Route component={NotFound} />
     </Switch>
