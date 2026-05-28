@@ -144,12 +144,11 @@ export default function SelfEnquiry() {
 
   if (!moduleEnabled) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4"
+      <div className="relative min-h-screen flex items-center justify-center bg-background p-4"
         style={{
           backgroundImage: `url(${bgmain})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
-          backgroundAttachment: "fixed",
         }}
       >
         <div className="absolute inset-0 bg-black/60" />
@@ -172,12 +171,11 @@ export default function SelfEnquiry() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4"
+      <div className="relative min-h-screen flex items-center justify-center bg-background p-4"
         style={{
           backgroundImage: `url(${bgmain})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
-          backgroundAttachment: "fixed",
         }}
       >
         <div className="absolute inset-0 bg-black/60" />
@@ -223,12 +221,11 @@ export default function SelfEnquiry() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4 py-8"
+      className="relative min-h-screen flex items-center justify-center p-4 py-8"
       style={{
         backgroundImage: `url(${bgmain})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
-        backgroundAttachment: "fixed",
       }}
     >
       <div className="absolute inset-0 bg-black/60" />
