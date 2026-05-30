@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from "react";
+import { useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, CheckCircle, LogOut, Clock, User, Dumbbell, Phone } from "lucide-react";
+import { Loader2, CheckCircle, LogOut, Clock, User, Dumbbell, Phone, ShieldAlert } from "lucide-react";
 import bgmain from "@/assets/bg-main.jpg";
 import { format } from "date-fns";
 
@@ -26,10 +27,13 @@ type LookupResult = {
   alreadyCheckedOut: boolean;
 };
 
-type Step = "phone" | "info";
+type Step = "validating" | "invalid" | "phone" | "info";
 
 export default function QRCheckIn() {
-  const [step, setStep] = useState<Step>("phone");
+  const [, params] = useRoute("/qr-attendance/:token");
+  const token = params?.token || "";
+
+  const [step, setStep] = useState<Step>("validating");
   const [phone, setPhone] = useState("");
   const [lookupResult, setLookupResult] = useState<LookupResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -39,6 +43,28 @@ export default function QRCheckIn() {
   const [elapsed, setElapsed] = useState("00:00:00");
   const { toast } = useToast();
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Validate token on mount
+  useEffect(() => {
+    if (!token) {
+      setStep("invalid");
+      return;
+    }
+    fetch("/api/qr-attendance/validate-token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.valid) {
+          setStep("phone");
+        } else {
+          setStep("invalid");
+        }
+      })
+      .catch(() => setStep("invalid"));
+  }, [token]);
 
   // Clean up timer on unmount
   useEffect(() => {
@@ -93,11 +119,16 @@ export default function QRCheckIn() {
       const res = await fetch("/api/qr-attendance/lookup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: phone.trim() }),
+        body: JSON.stringify({ phone: phone.trim(), token }),
       });
 
       if (!res.ok) {
         const err = await res.json();
+        // If token expired, show invalid state
+        if (res.status === 403) {
+          setStep("invalid");
+          return;
+        }
         throw new Error(err.error || "Member not found");
       }
 
@@ -131,7 +162,7 @@ export default function QRCheckIn() {
       const res = await fetch("/api/qr-attendance/lookup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: phone.trim() }),
+        body: JSON.stringify({ phone: phone.trim(), token }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -162,7 +193,7 @@ export default function QRCheckIn() {
       const refreshRes = await fetch("/api/qr-attendance/lookup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: phone.trim() }),
+        body: JSON.stringify({ phone: phone.trim(), token }),
       });
       if (refreshRes.ok) {
         const data = await refreshRes.json();
@@ -194,6 +225,51 @@ export default function QRCheckIn() {
       default: return "text-yellow-500";
     }
   };
+
+  // Loading/validating state
+  if (step === "validating") {
+    return (
+      <div className="relative min-h-screen flex items-center justify-center p-4"
+        style={{ backgroundImage: `url(${bgmain})`, backgroundSize: "cover", backgroundPosition: "center" }}
+      >
+        <div className="absolute inset-0 bg-black/60" />
+        <Card className="relative w-full max-w-md mx-auto bg-card/95 backdrop-blur border border-border shadow-2xl">
+          <CardContent className="py-16 flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">Validating QR code...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Invalid/expired token state
+  if (step === "invalid") {
+    return (
+      <div className="relative min-h-screen flex items-center justify-center p-4"
+        style={{ backgroundImage: `url(${bgmain})`, backgroundSize: "cover", backgroundPosition: "center" }}
+      >
+        <div className="absolute inset-0 bg-black/60" />
+        <Card className="relative w-full max-w-md mx-auto bg-card/95 backdrop-blur border border-border shadow-2xl text-center">
+          <CardContent className="pt-12 pb-10 px-8">
+            <div className="mx-auto mb-6 h-16 w-16 rounded-full bg-red-500/20 flex items-center justify-center">
+              <ShieldAlert className="h-8 w-8 text-red-500" />
+            </div>
+            <h2 className="text-2xl font-bold font-heading text-foreground mb-3">
+              Expired QR Code
+            </h2>
+            <p className="text-muted-foreground leading-relaxed mb-6">
+              This QR code has expired. QR codes refresh every few minutes for security.
+              Please scan a fresh QR code at the gym reception.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              If you're at the gym, ask the staff for a new QR code.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div

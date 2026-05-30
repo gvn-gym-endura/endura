@@ -98,7 +98,7 @@ function Router() {
 
       {/* Public Routes */}
       <Route path="/self-enquiry/:branchSlug?" component={SelfEnquiry} />
-      <Route path="/qr-attendance" component={QRCheckIn} />
+      <Route path="/qr-attendance/:token?" component={QRCheckIn} />
 
       <Route component={NotFound} />
     </Switch>

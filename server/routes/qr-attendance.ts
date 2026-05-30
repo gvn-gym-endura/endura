@@ -1,12 +1,81 @@
 import { Express } from "express";
 import { storage } from "../storage";
 import { format } from "date-fns";
+import { createHash } from "crypto";
+
+// Secret for token generation — use env var or a stable default for dev
+const TOKEN_SECRET = process.env.QR_TOKEN_SECRET || "gym-genie-qr-secret-change-in-production";
+
+const TOKEN_WINDOW_MINUTES = 5;
+
+function getTimeWindow(): string {
+  const now = Date.now();
+  const windowMs = TOKEN_WINDOW_MINUTES * 60 * 1000;
+  const windowStart = Math.floor(now / windowMs) * windowMs;
+  return windowStart.toString();
+}
+
+function generateToken(): string {
+  const date = format(new Date(), "yyyy-MM-dd");
+  const window = getTimeWindow();
+  const hash = createHash("sha256")
+    .update(`${TOKEN_SECRET}|${date}|${window}`)
+    .digest("hex");
+  return hash.slice(0, 16);
+}
+
+function validateToken(token: string): boolean {
+  const date = format(new Date(), "yyyy-MM-dd");
+  const currentWindow = getTimeWindow();
+
+  // Check current window
+  const currentHash = createHash("sha256")
+    .update(`${TOKEN_SECRET}|${date}|${currentWindow}`)
+    .digest("hex");
+  if (currentHash.slice(0, 16) === token) return true;
+
+  // Also accept previous window (grace period for edge cases)
+  const windowMs = TOKEN_WINDOW_MINUTES * 60 * 1000;
+  const prevWindow = (parseInt(currentWindow) - windowMs).toString();
+  const prevHash = createHash("sha256")
+    .update(`${TOKEN_SECRET}|${date}|${prevWindow}`)
+    .digest("hex");
+  if (prevHash.slice(0, 16) === token) return true;
+
+  return false;
+}
 
 export function registerQRAttendanceRoutes(app: Express) {
+  // Generate a fresh token for the current time window
+  app.get("/api/qr-attendance/token", (_req, res) => {
+    res.json({ token: generateToken() });
+  });
+
+  // Validate a token
+  app.post("/api/qr-attendance/validate-token", (req, res) => {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ valid: false, error: "Token is required" });
+    }
+    const valid = validateToken(token);
+    if (!valid) {
+      return res.json({ valid: false, error: "This QR code has expired. Please scan a fresh QR code at the gym." });
+    }
+    res.json({ valid: true });
+  });
+
   // Lookup member by phone for QR check-in
   app.post("/api/qr-attendance/lookup", async (req, res) => {
     try {
-      const { phone } = req.body;
+      const { phone, token } = req.body;
+
+      // Validate token
+      if (!token || !validateToken(token)) {
+        return res.status(403).json({
+          error: "This QR code has expired. Please scan a fresh QR code at the gym.",
+        });
+      }
+
       if (!phone) {
         return res.status(400).json({ error: "Phone number is required" });
       }

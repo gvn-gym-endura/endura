@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,27 @@ export default function AttendancePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { role: userRole } = useAuth();
+
+  // QR code token — auto-refreshes every 30 seconds
+  const [qrToken, setQrToken] = useState("");
+  const qrRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    const fetchToken = async () => {
+      try {
+        const res = await fetch("/api/qr-attendance/token");
+        if (res.ok) {
+          const data = await res.json();
+          setQrToken(data.token);
+        }
+      } catch { /* ignore */ }
+    };
+    fetchToken();
+    qrRefreshRef.current = setInterval(fetchToken, 30000);
+    return () => {
+      if (qrRefreshRef.current) clearInterval(qrRefreshRef.current);
+    };
+  }, []);
 
   // Member attendance state
   const [selectedMemberId, setSelectedMemberId] = useState("");
@@ -525,16 +546,22 @@ export default function AttendancePage() {
           </Card>
         )}
 
-        {/* QR Code for Self Check-in */}
+        {/* QR Code for Self Check-in — refreshes every 30 seconds */}
         <Card className="bg-card/50 backdrop-blur-sm">
           <CardContent className="pt-6">
             <div className="flex items-center gap-6 flex-wrap">
               <div className="bg-white p-2 rounded-lg">
-                <QRCodeSVG
-                  value={`${typeof window !== "undefined" ? window.location.origin : ""}/qr-attendance`}
-                  size={120}
-                  level="M"
-                />
+                {qrToken ? (
+                  <QRCodeSVG
+                    value={`${typeof window !== "undefined" ? window.location.origin : ""}/qr-attendance/${qrToken}`}
+                    size={120}
+                    level="M"
+                  />
+                ) : (
+                  <div className="w-[120px] h-[120px] flex items-center justify-center bg-muted/20 rounded">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                )}
               </div>
               <div className="flex-1 min-w-[200px]">
                 <div className="flex items-center gap-2 mb-1">
@@ -542,10 +569,10 @@ export default function AttendancePage() {
                   <p className="text-sm font-medium">Member Self Check-in</p>
                 </div>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Members can scan this QR code to check in/out using their phone number. No login required.
+                  QR code refreshes every 30 seconds for security. Scan at the gym reception to check in/out using your phone number.
                 </p>
                 <p className="text-xs text-muted-foreground font-mono bg-muted/50 px-2 py-1 rounded inline-block">
-                  {typeof window !== "undefined" ? window.location.origin : ""}/qr-attendance
+                  {typeof window !== "undefined" ? window.location.origin : ""}/qr-attendance/••••••••
                 </p>
               </div>
             </div>
