@@ -8,7 +8,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarCheck, Fingerprint, Smartphone, UserCheck, Clock, CalendarIcon, Loader2, Trash2, UserPlus, LogOut } from "lucide-react";
+import { CalendarCheck, Fingerprint, Smartphone, UserCheck, Clock, CalendarIcon, Loader2, Trash2, UserPlus, LogOut, QrCode } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -523,6 +524,33 @@ export default function AttendancePage() {
             </CardContent>
           </Card>
         )}
+
+        {/* QR Code for Self Check-in */}
+        <Card className="bg-card/50 backdrop-blur-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-6 flex-wrap">
+              <div className="bg-white p-2 rounded-lg">
+                <QRCodeSVG
+                  value={`${typeof window !== "undefined" ? window.location.origin : ""}/qr-attendance`}
+                  size={120}
+                  level="M"
+                />
+              </div>
+              <div className="flex-1 min-w-[200px]">
+                <div className="flex items-center gap-2 mb-1">
+                  <QrCode className="h-5 w-5 text-primary" />
+                  <p className="text-sm font-medium">Member Self Check-in</p>
+                </div>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Members can scan this QR code to check in/out using their phone number. No login required.
+                </p>
+                <p className="text-xs text-muted-foreground font-mono bg-muted/50 px-2 py-1 rounded inline-block">
+                  {typeof window !== "undefined" ? window.location.origin : ""}/qr-attendance
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <Dialog open={checkOutModalOpen} onOpenChange={setCheckOutModalOpen}>
           <DialogContent>

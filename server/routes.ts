@@ -31,6 +31,7 @@ import { registerMemberCreditsRoutes } from "./routes/memberCredits";
  import { registerWhatsAppRoutes } from "./routes/whatsapp";
  import { registerModuleControlRoutes } from "./routes/module-control";
  import { registerBookingsRoutes } from "./routes/bookings";
+ import { registerQRAttendanceRoutes } from "./routes/qr-attendance";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -72,6 +73,7 @@ export async function registerRoutes(
    registerWhatsAppRoutes(app);
    registerModuleControlRoutes(app);
    registerBookingsRoutes(app);
+  registerQRAttendanceRoutes(app);
 
   return httpServer;
 }

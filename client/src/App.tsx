@@ -10,6 +10,7 @@ import { NotificationPermissionPrompt } from "@/components/NotificationPermissio
 import { useSuperadminTerminal } from "@/hooks/useSuperadminTerminal";
 import { ModuleControlTerminal } from "@/components/admin/ModuleControlTerminal";
 import SelfEnquiry from "@/pages/SelfEnquiry";
+import QRCheckIn from "@/pages/QRCheckIn";
 import NotFound from "@/pages/not-found";
 
  // Admin Pages
@@ -97,6 +98,7 @@ function Router() {
 
       {/* Public Routes */}
       <Route path="/self-enquiry/:branchSlug?" component={SelfEnquiry} />
+      <Route path="/qr-attendance" component={QRCheckIn} />
 
       <Route component={NotFound} />
     </Switch>
