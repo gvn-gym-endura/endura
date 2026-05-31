@@ -70,7 +70,7 @@ interface WhatsAppStats {
 interface WhatsAppStatus {
   configured: boolean;
   message: string;
-  health?: { success: boolean; message: string; source?: 'meta' | 'waha' | 'none' };
+  health?: { success: boolean; message: string; source?: 'wasender' | 'meta' | 'none' };
 }
 
 interface WhatsAppSendForm {
@@ -269,8 +269,8 @@ export default function Notifications() {
   };
 
   const isWaConnected = waStatus?.configured && waStatus?.health?.success;
-  const waSource = waStatus?.health?.source || 'meta';
-  const waSourceLabel = waSource === 'waha' ? 'INK(Self-Hosted)' : waSource === 'meta' ? 'WhatsApp Business API' : 'Not Configured';
+  const waSource = waStatus?.health?.source || 'none';
+  const waSourceLabel = waSource === 'wasender' ? 'WASenderAPI' : waSource === 'meta' ? 'WhatsApp Business API' : 'Not Configured';
 
   return (
     <Layout>
@@ -384,7 +384,7 @@ export default function Notifications() {
                           "WhatsApp Not Configured"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {waStatus?.health?.message || waStatus?.message || waSource === 'waha' ? "Using INK server" : "Set USE_WAHA=true or configure WHATSAPP_API_TOKEN and PHONENUMBER_ID"}
+                        {waStatus?.health?.message || waStatus?.message || waSource === 'wasender' ? "Connected to WASenderAPI" : "Set WASENDER_API_KEY to enable WhatsApp messaging"}
                       </p>
                     </div>
                   </div>
@@ -544,7 +544,7 @@ export default function Notifications() {
                         {waSendMutation.isPending ? "Sending..." : waForm.recipientType === "all" ? "Broadcast to All Members" : "Send WhatsApp Message"}
                       </Button>
                       {!isWaConnected && !waStatusLoading && (
-                        <p className="text-xs text-center text-muted-foreground">{waSource === 'waha' ? "WAHA server not connected. Check server status." : "Configure WAHA or WhatsApp Business API to enable sending."}</p>
+                        <p className="text-xs text-center text-muted-foreground">{waSource === 'wasender' ? "WASenderAPI not connected. Check API key and status." : "Configure WASenderAPI to enable sending."}</p>
                       )}
                     </form>
                   </CardContent>

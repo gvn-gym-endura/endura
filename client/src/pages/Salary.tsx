@@ -596,7 +596,7 @@ export default function SalaryPage() {
       toast({ title: "Payslip sent via WhatsApp" });
     },
     onError: () => {
-      // WAHA is down — fallback to WhatsApp Web link
+      // WASenderAPI is down — fallback to WhatsApp Web link
       if (activePayoutForAction) {
         const trainerName = selectedTrainer?.firstName || "Trainer";
         const monthYear = `${MONTHS[activePayoutForAction.month - 1]} ${activePayoutForAction.year}`;
@@ -607,7 +607,7 @@ export default function SalaryPage() {
         const cleanPhone = whatsappPhone.replace(/\D/g, "");
         const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
         window.open(waUrl, "_blank");
-        toast({ title: "WAHA unavailable", description: "Opening WhatsApp Web instead — please send the message manually." });
+        toast({ title: "WASenderAPI unavailable", description: "Opening WhatsApp Web instead — please send the message manually." });
       }
       setWhatsappDialogOpen(false);
       setWhatsappPhone("");

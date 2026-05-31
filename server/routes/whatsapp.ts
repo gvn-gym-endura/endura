@@ -328,19 +328,19 @@ export function registerWhatsAppRoutes(app: Express): void {
       if (!configured) {
         return res.json({
           configured: false,
-          message: "WhatsApp API is not configured",
-          details: { hasToken: !!process.env.WHATSAPP_API_TOKEN, hasPhoneNumberId: !!process.env.PHONENUMBER_ID }
+          message: "WASenderAPI is not configured",
+          details: { hasApiKey: !!process.env.WASENDER_API_KEY }
         });
       }
       const healthResponse = await checkWhatsAppHealth();
       res.json({
         configured: true,
-        message: "WhatsApp API is configured",
+        message: "WASenderAPI is configured",
         health: healthResponse,
-        details: { hasToken: !!process.env.WHATSAPP_API_TOKEN, hasPhoneNumberId: !!process.env.PHONENUMBER_ID }
+        details: { hasApiKey: !!process.env.WASENDER_API_KEY }
       });
     } catch (error) {
-      res.status(500).json({ success: false, message: "Error checking WhatsApp status", error: error instanceof Error ? error.message : "Unknown error" });
+      res.status(500).json({ success: false, message: "Error checking WASenderAPI status", error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
 

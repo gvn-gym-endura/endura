@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-// WAHA Configuration (self-hosted)
-const WAHA_URL = process.env.WAHA_URL || 'http://146.190.221.253:3000';
-const WAHA_API_KEY = process.env.WAHA_API_KEY || 'my-secret-api-key';
+// WASenderAPI Configuration (cloud API — replaces WAHA)
+const WASENDER_BASE_URL = process.env.WASENDER_BASE_URL || 'https://www.wasenderapi.com';
+const WASENDER_API_KEY = process.env.WASENDER_API_KEY || '';
 
 // WhatsApp API Error Types
 export interface WhatsAppError {
@@ -24,6 +24,9 @@ export interface WhatsAppMessageResponse {
   messages?: Array<{
     id: string;
   }>;
+  key?: {
+    id: string;
+  };
 }
 
 // WhatsApp Test Request
@@ -37,7 +40,7 @@ export interface WhatsAppHealthResponse {
   success: boolean;
   message: string;
   phoneNumberId?: string;
-  source: 'waha' | 'none';
+  source: 'wasender' | 'none';
   error?: string;
 }
 
@@ -45,64 +48,74 @@ export interface WhatsAppHealthResponse {
  * Check if WhatsApp is configured
  */
 export function isWhatsAppConfigured(): boolean {
-  return true;
+  return !!WASENDER_API_KEY;
 }
 
 /**
  * Get the current WhatsApp source
  */
-export function getWhatsAppSource(): 'waha' | 'none' {
-  return 'waha';
+export function getWhatsAppSource(): 'wasender' | 'none' {
+  return WASENDER_API_KEY ? 'wasender' : 'none';
 }
 
 /**
- * Convert phone number to WAHA format (91XXXXXXXXXX@c.us) with 91 prefix
+ * Format phone number to E.164 format (+91XXXXXXXXXX)
  */
-function formatPhoneForWAHA(phoneNumber: string): string {
+function formatPhoneE164(phoneNumber: string): string {
   let clean = phoneNumber.replace(/[^\d]/g, '');
-  if (!clean.startsWith('91')) {
+  if (!clean.startsWith('91') && clean.length === 10) {
     clean = '91' + clean;
   }
-  return `${clean}@c.us`;
+  return `+${clean}`;
 }
 
 /**
- * Send WhatsApp message via WAHA
+ * Common headers for WASenderAPI requests
+ */
+function getHeaders() {
+  return {
+    'Authorization': `Bearer ${WASENDER_API_KEY}`,
+    'Content-Type': 'application/json',
+  };
+}
+
+/**
+ * Send WhatsApp message via WASenderAPI
  */
 export async function sendWhatsAppTestMessage(
   request: WhatsAppTestRequest
 ): Promise<WhatsAppMessageResponse | WhatsAppError> {
-  const chatId = formatPhoneForWAHA(request.to);
-  
-  console.log(`WAHA: Sending message to ${chatId}`);
-  
+  const to = formatPhoneE164(request.to);
+
+  console.log(`WASender: Sending message to ${to}`);
+
   try {
     const response = await axios.post(
-      `${WAHA_URL}/api/sendText`,
+      `${WASENDER_BASE_URL}/api/send-message`,
       {
-        session: 'default',
-        chatId: chatId,
-        text: request.message
+        to,
+        text: request.message,
       },
       {
-        headers: {
-          'X-Api-Key': WAHA_API_KEY,
-          'Content-Type': 'application/json'
-        },
-        timeout: 30000
+        headers: getHeaders(),
+        timeout: 30000,
       }
     );
 
-    console.log('WAHA: Message sent successfully');
-    
+    console.log('WASender: Message sent successfully');
+
+    const data = response.data;
     return {
       messaging_product: 'whatsapp',
-      contacts: [{ input: request.to, wa_id: chatId }],
-      messages: [{ id: response.data.id?.toString() || `waha_${Date.now()}` }]
+      contacts: [{ input: request.to, wa_id: to }],
+      messages: [{ id: data.key?.id || data.id || `wasender_${Date.now()}` }],
     };
   } catch (error: any) {
-    console.error('WAHA: Error sending message:', error.message);
-    throw new Error(`WAHA error: ${error.message}`);
+    console.error('WASender: Error sending message:', error.message);
+    if (error.response?.data) {
+      console.error('WASender: Error response:', JSON.stringify(error.response.data));
+    }
+    throw new Error(`WASender error: ${error.message}`);
   }
 }
 
@@ -112,28 +125,29 @@ export async function sendWhatsAppTestMessage(
 export async function checkWhatsAppHealth(): Promise<WhatsAppHealthResponse> {
   try {
     const response = await axios.get(
-      `${WAHA_URL}/api/sessions/default`,
+      `${WASENDER_BASE_URL}/api/status`,
       {
-        headers: { 'X-Api-Key': WAHA_API_KEY },
-        timeout: 5000
+        headers: getHeaders(),
+        timeout: 5000,
       }
     );
-    
-    const status = response.data.status;
+
+    const status = response.data?.status || 'unknown';
+    const isConnected = status === 'connected' || status === 'WORKING';
+
     return {
-      success: status === 'WORKING' || status === 'CONNECTED',
-      message: status === 'WORKING' || status === 'CONNECTED' 
-        ? 'WAHA is connected and working' 
-        : `WAHA session status: ${status}`,
-      phoneNumberId: 'default',
-      source: 'waha'
+      success: isConnected,
+      message: isConnected
+        ? 'WASenderAPI is connected and working'
+        : `WASenderAPI session status: ${status}`,
+      source: 'wasender',
     };
   } catch (error: any) {
     return {
       success: false,
-      message: 'Unable to connect to WAHA server',
-      source: 'waha',
-      error: error.message
+      message: 'Unable to connect to WASenderAPI',
+      source: 'wasender',
+      error: error.message,
     };
   }
 }
@@ -143,13 +157,13 @@ export async function checkWhatsAppHealth(): Promise<WhatsAppHealthResponse> {
  */
 export async function sendWhatsAppOTP(phoneNumber: string, otp: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const message = `Your verification code is: ${otp}\n\nThis code will expire in 5 minutes.`;
-  
+
   try {
     const result = await sendWhatsAppTestMessage({
       to: phoneNumber,
-      message
+      message,
     });
-    
+
     if ('messages' in result && result.messages?.[0]?.id) {
       return { success: true, messageId: result.messages[0].id };
     }
@@ -160,8 +174,8 @@ export async function sendWhatsAppOTP(phoneNumber: string, otp: string): Promise
 }
 
 /**
- * Send a payslip download link via WAHA as a text message.
- * Used when the Plus version is not available for /api/sendFile.
+ * Send a document (PDF payslip) via WASenderAPI using the document URL.
+ * Uploads the payslip to Supabase first (handled by caller), then sends via documentUrl.
  */
 export async function sendWhatsAppPayslipLink(
   phoneNumber: string,
@@ -170,57 +184,58 @@ export async function sendWhatsAppPayslipLink(
   netPayout: string,
   downloadUrl: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const chatId = formatPhoneForWAHA(phoneNumber);
-  const message = `Hi ${trainerName},\nYour payslip for ${monthYear} is ready.\n\nNet payout: ₹${netPayout}\n\nDownload: ${downloadUrl}\n\nThis link will remain available for your records.`;
+  const to = formatPhoneE164(phoneNumber);
+  const text = `Hi ${trainerName},\nYour payslip for ${monthYear} is ready.\n\nNet payout: ₹${netPayout}\n\nDownload: ${downloadUrl}\n\nThis link will remain available for your records.`;
 
-  console.log(`WAHA: Sending payslip link to ${chatId}: ${downloadUrl}`);
+  console.log(`WASender: Sending payslip to ${to}: ${downloadUrl}`);
 
   try {
     const response = await axios.post(
-      `${WAHA_URL}/api/sendText`,
+      `${WASENDER_BASE_URL}/api/send-message`,
       {
-        session: 'default',
-        chatId: chatId,
-        text: message,
+        to,
+        text,
       },
       {
-        headers: {
-          'X-Api-Key': WAHA_API_KEY,
-          'Content-Type': 'application/json',
-        },
+        headers: getHeaders(),
         timeout: 30000,
       }
     );
 
-    console.log('WAHA: Payslip link sent successfully');
+    console.log('WASender: Payslip sent successfully');
 
     return {
       success: true,
-      messageId: response.data.id?.toString() || `waha_link_${Date.now()}`,
+      messageId: response.data?.key?.id || response.data?.id || `wasender_link_${Date.now()}`,
     };
   } catch (error: any) {
-    console.error('WAHA: Error sending payslip link:', error.message);
+    console.error('WASender: Error sending payslip:', error.message);
+    if (error.response?.data) {
+      console.error('WASender: Error response body:', JSON.stringify(error.response.data));
+    }
     return {
       success: false,
-      error: `WAHA error: ${error.message}`,
+      error: `WASender error: ${error.message}`,
     };
   }
 }
 
 /**
- * Format phone number for WhatsApp API
+ * Format phone number for WhatsApp API (E.164)
  */
 export function formatPhoneNumber(phoneNumber: string): string {
-  let clean = phoneNumber.replace(/[^\d]/g, '');
-  if (!clean.startsWith('91')) {
-    clean = '91' + clean;
-  }
-  return clean;
+  return formatPhoneE164(phoneNumber);
 }
 
 /**
- * Send a document (file) via WAHA
- * Expects base64-encoded file data
+ * Upload a media file to WASenderAPI (base64), then send it as a document
+ * via a unified send-message call with documentUrl.
+ *
+ * For payslips the flow is:
+ *  1. Upload to Supabase (caller)
+ *  2. Call sendWhatsAppPayslipLink with the Supabase URL
+ *
+ * This function is kept for other document-sending use cases.
  */
 export async function sendWhatsAppDocument(
   phoneNumber: string,
@@ -228,54 +243,64 @@ export async function sendWhatsAppDocument(
   filename: string,
   caption: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const chatId = formatPhoneForWAHA(phoneNumber);
+  const to = formatPhoneE164(phoneNumber);
 
-  console.log(`WAHA: Sending document to ${chatId}, file: ${filename}`);
+  console.log(`WASender: Sending document to ${to}, file: ${filename}`);
 
   try {
-    // Strip data: URI prefix if present — WAHA expects raw base64 in file.data
+    // Step 1: Upload the file via WASenderAPI /api/upload
     const cleanBase64 = base64Data.includes(',')
       ? base64Data.split(',').pop()!
       : base64Data;
 
-    const response = await axios.post(
-      `${WAHA_URL}/api/sendFile`,
+    const uploadResponse = await axios.post(
+      `${WASENDER_BASE_URL}/api/upload`,
+      { base64: cleanBase64 },
       {
-        session: 'default',
-        chatId: chatId,
-        file: {
-          mimetype: 'application/pdf',
-          filename: filename,
-          data: cleanBase64,
-        },
-        caption: caption,
-      },
-      {
-        headers: {
-          'X-Api-Key': WAHA_API_KEY,
-          'Content-Type': 'application/json',
-        },
+        headers: getHeaders(),
         timeout: 60000,
       }
     );
 
-    console.log('WAHA: Document sent successfully');
+    const fileUrl = uploadResponse.data?.url || uploadResponse.data?.fileUrl;
+    if (!fileUrl) {
+      throw new Error('Failed to get upload URL from WASenderAPI');
+    }
+
+    console.log(`WASender: File uploaded to ${fileUrl}`);
+
+    // Step 2: Send the document via send-message with documentUrl
+    const response = await axios.post(
+      `${WASENDER_BASE_URL}/api/send-message`,
+      {
+        to,
+        documentUrl: fileUrl,
+        fileName: filename,
+        text: caption,
+      },
+      {
+        headers: getHeaders(),
+        timeout: 30000,
+      }
+    );
+
+    console.log('WASender: Document sent successfully');
 
     return {
       success: true,
-      messageId: response.data.id?.toString() || `waha_doc_${Date.now()}`,
+      messageId: response.data?.key?.id || response.data?.id || `wasender_doc_${Date.now()}`,
     };
   } catch (error: any) {
-    console.error('WAHA: Error sending document:', error.message);
+    console.error('WASender: Error sending document:', error.message);
     if (error.response?.data) {
-      console.error('WAHA: Error response body:', JSON.stringify(error.response.data));
+      console.error('WASender: Error response body:', JSON.stringify(error.response.data));
     }
     if (error.response?.status) {
-      console.error('WAHA: Error status:', error.response.status);
+      console.error('WASender: Error status:', error.response.status);
     }
     return {
       success: false,
-      error: `WAHA error: ${error.message}`,
+      error: `WASender error: ${error.message}`,
     };
   }
 }
