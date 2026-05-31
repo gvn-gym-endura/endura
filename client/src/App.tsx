@@ -48,6 +48,10 @@ import NotificationSettings from "@/pages/member/NotificationSettings";
 import MemberLogin from "@/pages/member/Login";
 import MemberPayments from "@/pages/member/Payments";
 
+// Legal Pages
+import TermsOfService from "@/pages/legal/TermsOfService";
+import PrivacyPolicy from "@/pages/legal/PrivacyPolicy";
+
 // Auth Pages
 import Login from "@/pages/auth/Login";
 import AdminAIUsageTable from "./components/AIUsageTable";
@@ -95,6 +99,10 @@ function Router() {
       <Route path="/member/trainers" component={MemberTrainers} />
       <Route path="/member/notifications" component={MemberNotifications} />
       <Route path="/member/notification-settings" component={NotificationSettings} />
+
+      {/* Legal Routes */}
+      <Route path="/terms" component={TermsOfService} />
+      <Route path="/privacy" component={PrivacyPolicy} />
 
       {/* Public Routes */}
       <Route path="/self-enquiry/:branchSlug?" component={SelfEnquiry} />

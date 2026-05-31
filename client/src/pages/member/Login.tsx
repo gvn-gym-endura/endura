@@ -204,13 +204,17 @@ export default function MemberLogin() {
                 <Send className="ml-2 h-4 w-4" />
               </Button>
               <div className="text-center mt-4">
-                <a 
-                  href="/login" 
+                <a
+                  href="/login"
                   className="text-sm text-muted-foreground hover:text-primary"
                   data-testid="link-staff-login"
                 >
                   Staff login
                 </a>
+              </div>
+              <div className="flex justify-center gap-4 mt-4 text-xs text-muted-foreground">
+                <a href="/terms" className="hover:text-primary transition-colors">Terms of Service</a>
+                <a href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</a>
               </div>
             </div>
           ) : (

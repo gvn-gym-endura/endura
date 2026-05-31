@@ -145,6 +145,10 @@ export default function Login() {
                   Member Login
                 </Button>
               </Link>
+              <div className="flex justify-center gap-4 mt-4 text-xs text-muted-foreground">
+                <Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>
+                <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
+              </div>
             </div>
           </form>
         </CardContent>
