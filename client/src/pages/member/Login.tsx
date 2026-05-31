@@ -87,7 +87,8 @@ export default function MemberLogin() {
       setStep("otp");
       toast({
         title: "Verification code sent",
-        description: demoOtp ? "Demo OTP: " + demoOtp : "Please check your WhatsApp for the verification code.",
+        // description: demoOtp ? "Demo OTP: " + demoOtp : "Please check your WhatsApp for the verification code.",
+        description: "Please check your WhatsApp for the verification code or try again after a 1 minute.",
       });
     } catch (error: any) {
       toast({
