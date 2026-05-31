@@ -56,28 +56,34 @@ export default function MemberLogin() {
 
       const demoOtp = otpData.demoOtp;
 
-      // Then send OTP via WhatsApp
+      // Then send OTP via WhatsApp (silent — don't block if rate-limited)
       const formattedPhone = formatPhoneForWhatsApp(phone);
       const message = `Your verification code is: ${demoOtp}\n\nThis code will expire in 5 minutes.`;
-      
-      const waRes = await apiRequest("POST", "/api/whatsapp/send", {
-        recipientType: "individual",
-        phone: formattedPhone,
-        recipientName: "Member",
-        message: message,
-      });
 
-      const waData = await waRes.json();
-
-      if (!waRes.ok || !waData.success) {
-        console.warn("WhatsApp send failed, but OTP is stored:", waData.message);
+      try {
+        const waRes = await fetch("/api/whatsapp/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            recipientType: "individual",
+            phone: formattedPhone,
+            recipientName: "Member",
+            message: message,
+          }),
+        });
+        const waData = await waRes.json();
+        if (!waRes.ok || !waData.success) {
+          console.warn("WhatsApp send failed, but OTP is stored:", waData.message || waData.error);
+        }
+      } catch (sendErr) {
+        console.warn("WhatsApp send error (non-blocking):", sendErr);
       }
 
       setDemoOtp(demoOtp);
       setStep("otp");
       toast({
-        title: "OTP Sent via WhatsApp",
-        description: "Please check your WhatsApp for the verification code.",
+        title: "Verification code sent",
+        description: demoOtp ? "Demo OTP: " + demoOtp : "Please check your WhatsApp for the verification code.",
       });
     } catch (error: any) {
       toast({
