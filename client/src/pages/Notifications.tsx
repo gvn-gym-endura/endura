@@ -165,8 +165,6 @@ export default function Notifications() {
   };
 
   const isWaConnected = waStatus?.configured && waStatus?.health?.success;
-  const waSource = waStatus?.health?.source || 'none';
-  const waSourceLabel = waSource === 'wasender' ? 'WASenderAPI' : waSource === 'meta' ? 'WhatsApp Business API' : 'Not Configured';
 
   return (
     <Layout>
@@ -201,12 +199,12 @@ export default function Notifications() {
                     <div>
                       <p className="font-semibold text-sm">
                         {waStatusLoading ? "Checking connection..." :
-                          isWaConnected ? `WhatsApp Connected (${waSourceLabel})` :
+                          isWaConnected ? "WhatsApp Connected" :
                           waStatus?.configured ? "API Configured but Unreachable" :
                           "WhatsApp Not Configured"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {waStatus?.health?.message || waStatus?.message || waSource === 'wasender' ? "Connected to WASenderAPI" : "Set WASENDER_API_KEY to enable WhatsApp messaging"}
+                        {waStatus?.health?.message || waStatus?.message || "Configure WhatsApp API to enable messaging"}
                       </p>
                     </div>
                   </div>
@@ -366,7 +364,7 @@ export default function Notifications() {
                         {waSendMutation.isPending ? "Sending..." : waForm.recipientType === "all" ? "Broadcast to All Members" : "Send WhatsApp Message"}
                       </Button>
                       {!isWaConnected && !waStatusLoading && (
-                        <p className="text-xs text-center text-muted-foreground">{waSource === 'wasender' ? "WASenderAPI not connected. Check API key and status." : "Configure WASenderAPI to enable sending."}</p>
+                        <p className="text-xs text-center text-muted-foreground">WhatsApp not connected. Check API configuration to enable messaging.</p>
                       )}
                     </form>
                   </CardContent>
