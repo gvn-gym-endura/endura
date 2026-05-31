@@ -60,6 +60,7 @@ export default function MemberLogin() {
       const formattedPhone = formatPhoneForWhatsApp(phone);
       const message = `Your verification code is: ${demoOtp}\n\nThis code will expire in 5 minutes.`;
 
+      let otpSent = true;
       try {
         const waRes = await fetch("/api/whatsapp/send", {
           method: "POST",
@@ -74,12 +75,15 @@ export default function MemberLogin() {
         const waData = await waRes.json();
         if (!waRes.ok || !waData.success) {
           console.warn("WhatsApp send failed, but OTP is stored:", waData.message || waData.error);
+          otpSent = false;
         }
       } catch (sendErr) {
         console.warn("WhatsApp send error (non-blocking):", sendErr);
+        otpSent = false;
       }
 
-      setDemoOtp(demoOtp);
+      // Don't expose demo OTP if rate-limited (429) — WhatsApp wasn't actually sent
+      setDemoOtp(otpSent ? demoOtp : null);
       setStep("otp");
       toast({
         title: "Verification code sent",
