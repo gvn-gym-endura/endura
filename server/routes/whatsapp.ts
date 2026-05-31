@@ -226,7 +226,12 @@ export function registerWhatsAppRoutes(app: Express): void {
 
         // Fallback: send to provided phone number
         const request: WhatsAppTestRequest = { to: normalizePhoneNumber(data.phone!), message: data.message };
-        const response = await sendWhatsAppTestMessage(request);
+        let response: any;
+        try {
+          response = await sendWhatsAppTestMessage(request);
+        } catch (e) {
+          response = { error: { message: e instanceof Error ? e.message : "Unknown error" } };
+        }
 
         const logEntry: WhatsAppMessageLog = {
           id: generateId(),
@@ -243,7 +248,8 @@ export function registerWhatsAppRoutes(app: Express): void {
         messageLog.unshift(logEntry);
 
         if ("error" in response) {
-          return res.status(400).json({ success: false, message: "Failed to send WhatsApp message", error: response.error.message, log: logEntry });
+          const statusCode = response.error.code === 429 ? 429 : 400;
+          return res.status(statusCode).json({ success: false, message: "Failed to send WhatsApp message", error: response.error.message, log: logEntry });
         }
 
         return res.json({ success: true, message: "WhatsApp message sent successfully", log: logEntry });

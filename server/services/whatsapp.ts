@@ -115,7 +115,18 @@ export async function sendWhatsAppTestMessage(
     if (error.response?.data) {
       console.error('WASender: Error response:', JSON.stringify(error.response.data));
     }
-    throw new Error(`WASender error: ${error.message}`);
+
+    // Return structured error instead of throwing — caller handles via 'error' in response
+    const statusCode = error.response?.status || 500;
+    const errorBody = error.response?.data;
+    return {
+      error: {
+        message: errorBody?.message || errorBody?.error || `Request failed with status code ${statusCode}`,
+        type: errorBody?.type || 'api_error',
+        code: statusCode,
+        fbtrace_id: errorBody?.fbtrace_id || '',
+      },
+    };
   }
 }
 
