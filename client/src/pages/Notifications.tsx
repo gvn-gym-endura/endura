@@ -3,9 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableMultiSelect } from "@/components/ui/searchable-multi-select";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -14,37 +12,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Bell, CheckCheck, Plus, Trash2, Loader2, ExternalLink,
-  MessageCircle, Send, RefreshCw, CheckCircle2, XCircle, Users, User, Wifi, WifiOff
+  MessageCircle, Send, RefreshCw, CheckCircle2, XCircle, Users, User, Wifi, WifiOff,
+  Bell, Trash2, Loader2
 } from "lucide-react";
 import { format } from "date-fns";
 import type { Member } from "@shared/schema";
-
-// ─── Push Notifications ────────────────────────────────────────────────────
-
-const sentToTypeOptions = [
-  { value: "individual", label: "Individual Member" },
-  { value: "all", label: "All Members" },
-];
-
-interface Notification {
-  id: string;
-  message: string;
-  date: string;
-  sentTo: string;
-  sentToType: string;
-  status: string;
-  deliveryStatus: string;
-  createdAt: string;
-}
-
-interface NotificationFormData {
-  title: string;
-  message: string;
-  sentTo: string | string[];
-  sentToType: string;
-  url: string;
-}
 
 // ─── WhatsApp ──────────────────────────────────────────────────────────────
 
@@ -84,18 +56,8 @@ interface WhatsAppSendForm {
 // ─── Main Component ────────────────────────────────────────────────────────
 
 export default function Notifications() {
-  // Push notifications state
-  const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  const [formData, setFormData] = useState<NotificationFormData>({
-    title: "",
-    message: "",
-    sentTo: [],
-    sentToType: "individual",
-    url: "",
-  });
 
   // WhatsApp state
   const [waForm, setWaForm] = useState<WhatsAppSendForm>({
@@ -106,75 +68,9 @@ export default function Notifications() {
     message: "",
   });
 
-  // ── Push queries & mutations ──────────────────────────────────────────────
-
-  const { data: notifications = [], isLoading: notifLoading } = useQuery<Notification[]>({
-    queryKey: ["/api/notifications"],
-  });
-
   const { data: members = [] } = useQuery<Member[]>({
     queryKey: ["/api/members"],
   });
-
-  const createMutation = useMutation({
-    mutationFn: async (data: NotificationFormData) => {
-      let sentToValue: string | string[] = "";
-      
-      if (data.sentToType === "individual") {
-        if (Array.isArray(data.sentTo)) {
-          sentToValue = data.sentTo;
-        } else {
-          sentToValue = data.sentTo ? [data.sentTo] : [];
-        }
-      }
-      
-      const res = await apiRequest("POST", "/api/notifications", {
-        title: data.title,
-        message: data.message,
-        sentTo: sentToValue,
-        sentToType: data.sentToType,
-        url: data.url || undefined,
-      });
-      return res.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
-      toast({ title: data.pushSent ? "Notification sent via OneSignal!" : "Notification created" });
-      resetPushForm();
-      setOpen(false);
-    },
-    onError: (error: any) => toast({ title: "Error", description: error.message, variant: "destructive" }),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => { await apiRequest("DELETE", `/api/notifications/${id}`); },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/notifications"] }); toast({ title: "Notification deleted" }); },
-    onError: (error: any) => toast({ title: "Error", description: error.message, variant: "destructive" }),
-  });
-
-  const resetPushForm = () => setFormData({ title: "", message: "", sentTo: [], sentToType: "individual", url: "" });
-
-  const handlePushSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.title.trim() || !formData.message.trim()) {
-      return toast({ title: "Error", description: "Title and message are required", variant: "destructive" });
-    }
-    if (formData.sentToType === "individual" && (!formData.sentTo || (Array.isArray(formData.sentTo) && formData.sentTo.length === 0))) {
-      return toast({ title: "Error", description: "Please select at least one member", variant: "destructive" });
-    }
-    createMutation.mutate(formData);
-  };
-
-  const getDeliveryStatusColor = (status: string) => {
-    switch (status) {
-      case "delivered": return "text-green-500";
-      case "sending": return "text-blue-500";
-      case "pending": return "text-yellow-500";
-      case "partial": return "text-orange-500";
-      case "failed": return "text-red-500";
-      default: return "text-muted-foreground";
-    }
-  };
 
   // ── WhatsApp queries & mutations ──────────────────────────────────────────
 
@@ -277,89 +173,15 @@ export default function Notifications() {
       <div className="space-y-8">
         <div className="flex flex-col gap-2">
           <h1 className="text-4xl font-bold font-heading text-foreground uppercase tracking-tight">NOTIFICATIONS</h1>
-          <p className="text-muted-foreground">Manage push and WhatsApp notifications for your gym members.</p>
+          <p className="text-muted-foreground">Send and manage WhatsApp notifications for your gym members.</p>
         </div>
 
-        <Tabs defaultValue="push" className="w-full">
+        <Tabs defaultValue="whatsapp" className="w-full">
           <TabsList className="mb-6 bg-muted/60 border border-border">
-            <TabsTrigger value="push" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-bold uppercase tracking-wider text-xs">
-              <Bell className="h-4 w-4" /> Push Notifications
-            </TabsTrigger>
             <TabsTrigger value="whatsapp" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-bold uppercase tracking-wider text-xs">
-              <MessageCircle className="h-4 w-4" /> WhatsApp
+              <MessageCircle className="h-4 w-4" /> WhatsApp Notifications
             </TabsTrigger>
           </TabsList>
-
-          {/* ── Push Notifications Tab ─────────────────────────────────── */}
-          <TabsContent value="push">
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <p className="text-muted-foreground">{notifications.length} notifications sent</p>
-                <Button
-                  className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/30 font-bold uppercase tracking-wider"
-                  onClick={() => { resetPushForm(); setOpen(true); }}
-                >
-                  <Plus className="h-4 w-4" /> New Push Notification
-                </Button>
-              </div>
-
-              {notifLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : notifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <Bell className="h-12 w-12 mb-4 opacity-50" />
-                  <p className="text-lg font-medium">No notifications sent yet</p>
-                  <p className="text-sm">Click "New Push Notification" to get started</p>
-                </div>
-              ) : (
-                <ScrollArea className="h-[600px] w-full max-w-3xl rounded-md border border-border p-4">
-                  <div className="space-y-4">
-                    {notifications.map((notif) => (
-                      <Card key={notif.id} className="bg-card/50 backdrop-blur-sm border-l-4 border-l-primary">
-                        <CardContent className="pt-6 pb-6 flex gap-4">
-                          <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                            <Bell className="h-5 w-5 text-primary" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex justify-between items-start">
-                              <h3 className="font-bold text-lg">{notif.message}</h3>
-                              <span className="text-xs text-muted-foreground">{format(new Date(notif.createdAt), "MMM d, yyyy h:mm a")}</span>
-                            </div>
-                            <div className="mt-2 flex items-center justify-between">
-                              <p className="text-sm text-muted-foreground">
-                                To: <span className="text-foreground font-medium">{notif.sentTo}</span>
-                                {notif.sentToType !== "individual" && (
-                                  <span className="ml-2 px-2 py-0.5 text-xs rounded bg-primary/10 text-primary">
-                                    {notif.sentToType === "all" ? "All Members" : "All"}
-                                  </span>
-                                )}
-                              </p>
-                              <div className={`flex items-center gap-1 text-xs ${getDeliveryStatusColor(notif.deliveryStatus)}`}>
-                                <CheckCheck className="h-3 w-3" />
-                                {notif.deliveryStatus === "delivered" ? "Delivered" :
-                                  notif.deliveryStatus === "sending" ? "Sending" :
-                                  notif.deliveryStatus === "partial" ? "Partially Delivered" :
-                                  notif.deliveryStatus === "failed" ? "Failed" :
-                                  notif.deliveryStatus}
-                              </div>
-                            </div>
-                            <div className="mt-3 flex gap-2">
-                              <Button size="sm" variant="destructive" className="h-8 w-8 p-0"
-                                onClick={() => confirm("Delete this notification?") && deleteMutation.mutate(notif.id)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </ScrollArea>
-              )}
-            </div>
-          </TabsContent>
 
           {/* ── WhatsApp Tab ───────────────────────────────────────────── */}
           <TabsContent value="whatsapp">
@@ -626,126 +448,6 @@ export default function Notifications() {
             </div>
           </TabsContent>
         </Tabs>
-
-        {/* Push Notification Sheet */}
-        <Sheet open={open} onOpenChange={(val) => { setOpen(val); if (!val) resetPushForm(); }}>
-          <SheetContent className="sm:max-w-lg w-full bg-card border-l border-border overflow-y-auto">
-            <SheetHeader className="border-b border-border pb-6 mb-6">
-              <SheetTitle className="text-2xl font-bold font-heading text-primary uppercase tracking-tight">
-                New Push Notification
-              </SheetTitle>
-            </SheetHeader>
-
-            <form onSubmit={handlePushSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Title <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="e.g., Special Offer!"
-                  className="bg-background border-border h-12 text-base"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Message <span className="text-destructive">*</span>
-                </Label>
-                <textarea
-                  value={formData.message}
-                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  placeholder="e.g., Get 20% off on all premium plans this week!"
-                  className="w-full min-h-[100px] px-3 py-2 rounded-lg border border-border bg-background text-foreground resize-none"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Send To <span className="text-destructive">*</span>
-                </Label>
-                <Select value={formData.sentToType} onValueChange={(val) => setFormData({ ...formData, sentToType: val, sentTo: [] })}>
-                  <SelectTrigger className="bg-background border-border h-12">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sentToTypeOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {formData.sentToType === "individual" && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Select Members <span className="text-destructive">*</span>
-                  </Label>
-                  <SearchableMultiSelect
-                    value={formData.sentTo as string[]}
-                    onValueChange={(val) => setFormData({ ...formData, sentTo: val })}
-                    members={members}
-                    placeholder="Choose members"
-                    className="h-12"
-                  />
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  <ExternalLink className="inline h-3 w-3 mr-1" />
-                  Link URL (Optional)
-                </Label>
-                <Input
-                  value={formData.url}
-                  onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                  placeholder="e.g., /member/payments or https://example.com"
-                  className="bg-background border-border h-11"
-                />
-                <p className="text-xs text-muted-foreground">Where the user will be directed when they tap the notification</p>
-              </div>
-
-              <div className="p-4 rounded-lg bg-muted/50 border border-border">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 block">Preview</Label>
-                <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-md max-w-sm">
-                  <div className="flex items-start gap-3">
-                    <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                      <Bell className="h-5 w-5 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">Gym Genie</p>
-                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200 mt-0.5">
-                        {formData.title || "Notification Title"}
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-2">
-                        {formData.message || "Notification message will appear here..."}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3 pt-4 border-t border-border">
-                <Button
-                  type="submit"
-                  className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90 font-bold uppercase tracking-wider text-base"
-                  disabled={createMutation.isPending || (formData.sentToType === "individual" && (!formData.sentTo || (Array.isArray(formData.sentTo) && formData.sentTo.length === 0)))}
-                >
-                  {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Send Push Notification
-                </Button>
-                <SheetClose asChild>
-                  <Button type="button" variant="outline" className="w-full h-12 border-border hover:bg-muted font-bold uppercase tracking-wider">
-                    Cancel
-                  </Button>
-                </SheetClose>
-              </div>
-            </form>
-          </SheetContent>
-        </Sheet>
       </div>
     </Layout>
   );
