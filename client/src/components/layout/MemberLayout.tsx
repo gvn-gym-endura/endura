@@ -10,7 +10,7 @@ const memberNav = [
   { icon: CreditCard, label: "Payments", href: "/member/payments" },
   { icon: Dumbbell, label: "My Workouts", href: "/member/workouts" },
   { icon: Heart, label: "Health Tracker", href: "/member/health" },
-  { icon: Bell, label: "Notifications", href: "/member/notifications" },
+  // { icon: Bell, label: "Notifications", href: "/member/notifications" },
   { icon: Users, label: "My Trainers", href: "/member/trainers" },
 ];
 
