@@ -70,43 +70,34 @@ export function MemberMemberships({ memberId }: MemberProfileProps) {
 
   // Calculate payment info from payments table
   const paymentInfo = useMemo(() => {
-    if (!member || payments.length === 0) {
-      const due = member?.totalDue || 0;
+    // Always use member.totalDue as the authoritative plan cost,
+    // not the payment record's originalAmount (which may use a different unit).
+    const originalAmount = member?.totalDue || 0;
+    const discount = member?.discount ?? 0;
+    const currentDiscount = Math.min(100, Math.max(0, discount));
+    const actualAmountDue = Math.round(originalAmount * (1 - currentDiscount / 100));
+
+    if (!payments || payments.length === 0) {
       const paid = member?.amountPaid || 0;
-      const discount = member?.discount || 0;
-      const actualAmountDue = Math.round(due * (1 - discount / 100));
       return {
         totalPaid: paid,
         actualAmountDue,
-        currentDiscount: discount,
+        currentDiscount,
         balance: actualAmountDue - paid,
-        currentOriginalAmount: due,
+        currentOriginalAmount: originalAmount,
       };
     }
 
     const paidPayments = payments.filter(p => p.status === "paid");
     const totalPaid = paidPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-    
-    // Get most recent payment for current subscription details
-    const sortedPayments = [...paidPayments].sort((a, b) => 
-      new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime()
-    );
-    
-    const currentOriginalAmount = sortedPayments[0]?.originalAmount || member.totalDue || 0;
-    const paymentDiscount = sortedPayments[0]?.discountPercentage;
-    const rawDiscount = (paymentDiscount != null && paymentDiscount >= 0) 
-      ? paymentDiscount 
-      : (member.discount ?? 0);
-    const currentDiscount = Math.min(100, Math.max(0, rawDiscount));
-    const actualAmountDue = Math.round(currentOriginalAmount * (1 - currentDiscount / 100));
     const balance = actualAmountDue - totalPaid;
-    
+
     return {
       totalPaid,
       actualAmountDue,
       currentDiscount,
       balance,
-      currentOriginalAmount,
+      currentOriginalAmount: originalAmount,
     };
   }, [payments, member]);
 
