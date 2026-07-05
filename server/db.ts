@@ -34,6 +34,17 @@ function getPool(): pg.Pool {
   if (pool) return pool;
   
   const connectionString = process.env.DATABASE_URL;
+
+  if (!connectionString) {
+    const error = new Error(
+      "DATABASE_URL environment variable is not set. " +
+      "Please configure it in your Vercel project settings (Settings → Environment Variables), " +
+      "or add it to your .env file for local development."
+    );
+    console.error("[DB] Missing DATABASE_URL");
+    throw error;
+  }
+
   const rejectUnauthorizedOverride = parseBoolean(process.env.DATABASE_SSL_REJECT_UNAUTHORIZED);
   const disableVerificationViaUrl = shouldDisableSslVerification(connectionString);
   const defaultRejectUnauthorized = process.env.NODE_ENV === 'production';
