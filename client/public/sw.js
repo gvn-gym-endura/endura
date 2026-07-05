@@ -95,8 +95,36 @@ self.addEventListener('fetch', (event) => {
 
   // Handle API requests
   if (url.pathname.startsWith('/api/')) {
-    // Cache GET requests to specific API endpoints
-    if (request.method === 'GET' && API_CACHE_PATTERNS.some(pattern => pattern.test(url.pathname))) {
+    // Always bypass cache for authentication endpoints
+    const AUTH_PATTERNS = [
+      /\/api\/auth\/login/,
+      /\/api\/auth\/member\/send-otp/,
+      /\/api\/auth\/member\/verify-otp/,
+      /\/api\/auth\/seed-demo/
+    ];
+    
+    const isAuthEndpoint = AUTH_PATTERNS.some(pattern => pattern.test(url.pathname));
+    
+    // Never cache authentication requests - always go to network
+    if (isAuthEndpoint || request.method !== 'GET') {
+      event.respondWith(
+        fetch(request).catch((error) => {
+          console.error('Service Worker: API request failed:', error);
+          // Return a proper error response instead of cached data
+          return new Response(JSON.stringify({ 
+            error: 'Network error', 
+            message: 'Please check your connection' 
+          }), {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        })
+      );
+      return;
+    }
+    
+    // Cache GET requests to specific API endpoints (excluding auth)
+    if (API_CACHE_PATTERNS.some(pattern => pattern.test(url.pathname))) {
       event.respondWith(
         caches.open(DYNAMIC_CACHE).then((cache) => {
           return fetch(request)
@@ -114,7 +142,7 @@ self.addEventListener('fetch', (event) => {
         })
       );
     } else {
-      // For other API requests, try network first, then cache
+      // For other API requests, try network first
       event.respondWith(
         fetch(request).catch(() => {
           return caches.match(request);

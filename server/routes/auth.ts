@@ -94,7 +94,9 @@ export function registerAuthRoutes(app: Express) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid credentials format" });
       }
-      res.status(500).json({ error: "Login failed" });
+      console.error("Login error:", error);
+      const message = error instanceof Error ? error.message : "Login failed";
+      res.status(500).json({ error: "Login failed", message });
     }
   });
 
