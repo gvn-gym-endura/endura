@@ -51,3 +51,5 @@ next-env.d.ts
 .qwen/settings.json
 .qwen/settings.json.orig
 .env.production.client2
+.env.vercel
+.env.vercel.prod

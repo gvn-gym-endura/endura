@@ -288,6 +288,7 @@ function transformAttendanceToCamelCase(record: any): Attendance {
     memberName: record.memberName,
     date: record.date,
     checkInTime: record.checkInTime,
+    checkOutTime: record.checkOutTime,
     method: record.method,
     createdAt: record.createdAt,
   };
